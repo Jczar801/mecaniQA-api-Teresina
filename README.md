@@ -1,442 +1,117 @@
-# MecâniQA API
+# MecâniQA API - Teresina
 
-API REST desenvolvida para o projeto MecâniQA, responsável pelo gerenciamento de Peças e Serviços.
-O projeto foi desenvolvido utilizando Java 21 e Spring Boot, implementando endpoints REST para operações de cadastro, consulta, atualização e exclusão de dados.
-Os dados são armazenados em memória, utilizando o padrão de projeto Singleton nos repositórios.
+API REST em Java 21, Spring Boot 3.5.5 e Gradle. A OAT 2 evolui o CRUD de peças e serviços da OAT 1 com ordens de serviço e pedidos de peças.
 
----
+## Execução e testes
 
-## Sobre o Projeto
+É necessário um JDK 21. Configure `JAVA_HOME` para esse JDK.
 
-A MecâniQA API foi desenvolvida como uma API fundacional para representar parte da estrutura de gerenciamento de uma oficina mecânica.
-A aplicação possui dois recursos principais:
-
-- 🔧 **Peças**
-- 🛠️ **Serviços**
-
-Cada recurso possui endpoints para realizar operações CRUD.
-A API também implementa o tratamento de diferentes respostas HTTP, incluindo:
-
-- `200 OK`
-- `201 Created`
-- `204 No Content`
-- `400 Bad Request`
-- `404 Not Found`
-
----
-
-## Tecnologias Utilizadas
-
-- **Java 21**
-- **Spring Boot 3.5.5**
-- **Spring Web**
-- **Gradle**
-- **Postman**
-- **API REST**
-- **JSON**
-
----
-
-## Arquitetura do Projeto
-
-A aplicação está organizada utilizando uma estrutura simples dividida em:
-
-```text
-src/main/java/com/mecaniqa/api/
-│
-├── MecaniQaApiApplication.java
-│
-├── controller/
-│   ├── PecaController.java
-│   └── ServicoController.java
-│
-├── model/
-│   ├── Peca.java
-│   ├── Servico.java
-│   └── CategoriaPeca.java
-│
-└── repository/
-    ├── PecaRepository.java
-    └── ServicoRepository.java
+```powershell
+.\gradlew.bat bootRun
+.\gradlew.bat test
 ```
 
-Além do código principal, o projeto possui:
+No Linux/macOS, use `./gradlew bootRun` e `./gradlew test`. URL base: `http://localhost:8080`.
 
-```text
-documentacao/
-└── diagrama-classes.md
+Os dados permanecem exclusivamente em memória e são perdidos ao reiniciar a aplicação. Os repositórios usam Singleton estático; não há banco de dados nem Lombok. Construtores e acessores são explícitos.
 
-postman/
-└── mecaniQA-api.postman_collection.json
+## Endpoints
+
+| Recurso | Método e rota | Resultado |
+|---|---|---|
+| Peças | `POST /api/pecas` | Cadastro, 201 |
+| Peças | `GET /api/pecas` | Lista, 200 |
+| Peças | `GET /api/pecas/{codigo}` | Consulta, 200/404 |
+| Peças | `PUT /api/pecas/{codigo}` | Atualização, 200/404 |
+| Peças | `DELETE /api/pecas/{codigo}` | Exclusão, 204/404 |
+| Serviços | `POST /api/servicos` | Cadastro, 201 |
+| Serviços | `GET /api/servicos` | Lista, 200 |
+| Serviços | `GET /api/servicos/{codigo}` | Consulta, 200/404 |
+| Serviços | `PUT /api/servicos/{codigo}` | Atualização, 200/404 |
+| Serviços | `DELETE /api/servicos/{codigo}` | Exclusão, 204/404 |
+| US01 | `POST /api/ordens-servico` | Cria OS, 201 |
+| US02 | `PATCH /api/ordens-servico/{codigo}/status` | Altera status da OS, 200 |
+| US03 | `POST /api/pedidos-pecas` | Cria pedido, 201 |
+| US04 | `POST /api/pedidos-pecas/{codigo}/itens` | Adiciona peça e quantidade, 200 |
+| US05 | `PATCH /api/pedidos-pecas/{codigo}/status` | Altera status do pedido, 200 |
+
+Entradas inválidas retornam 400; referências a peças, serviços, pedidos ou ordens inexistentes retornam 404. Quantidades devem ser inteiras positivas. A repetição de uma peça soma sua quantidade no mesmo item; soma acima do limite de `Integer` retorna 400 sem alterar o pedido. A criação com itens só é salva após validar todos eles.
+
+## Exemplo completo
+
+Substitua os códigos de exemplo pelos retornados nos cadastros. A coleção `postman/MecaniQA_API_OAT2.postman_collection.json` automatiza essa sequência e armazena os códigos recebidos em variáveis.
+
+1. `POST /api/pecas`
+
+```json
+{"codigoBarras":"7891234567890","fornecedorMarca":"Bosch","quantidadeEstoque":10,"precoCusto":50,"precoVenda":80,"tamanho":"M","cor":"Preto","categoria":"MOTOR"}
 ```
 
----
+Categorias disponíveis: `MOTOR`, `SUSPENSAO`, `FREIOS`, `ELETRICA`, `ACESSORIOS`.
 
-##  Modelos da Aplicação
+2. `POST /api/servicos`
 
-### 🔧 Peça
-A classe `Peca` representa uma peça cadastrada no sistema.
+```json
+{"nome":"Revisão","tempoEstimadoMinutos":60,"custoTabelado":150}
+```
 
-| Atributo | Tipo |
+3. `POST /api/pedidos-pecas`
+
+```json
+{"itens":[{"codigoPeca":1,"quantidade":2}]}
+```
+
+Também é possível enviar `{}` para iniciar um pedido vazio. O status inicial é `ORCANDO`.
+
+4. `POST /api/pedidos-pecas/1/itens`
+
+```json
+{"codigoPeca":1,"quantidade":3}
+```
+
+5. `PATCH /api/pedidos-pecas/1/status`
+
+```json
+{"status":"PAGO_FATURADO"}
+```
+
+6. `POST /api/ordens-servico`
+
+```json
+{"descricao":"Revisão do veículo","codigosServicos":[1],"codigosPedidosPecas":[1]}
+```
+
+Descrição e associações são opcionais, pois o enunciado não define campos obrigatórios de cliente/veículo. O Builder inicia a OS em `ABERTO`, registra datas e reúne os serviços e pedidos informados. Códigos repetidos nas listas de associações são tratados como uma associação única. Peças são vinculadas à OS por meio dos pedidos e seus itens.
+
+7. `PATCH /api/ordens-servico/1/status`
+
+```json
+{"status":"EM_EXECUCAO"}
+```
+
+| OS | Pedido de peças |
 |---|---|
-| `codigo` | `Long` |
-| `codigoBarras` | `String` |
-| `fornecedorMarca` | `String` |
-| `quantidadeEstoque` | `Integer` |
-| `precoCusto` | `Double` |
-| `precoVenda` | `Double` |
-| `dataCadastro` | `LocalDateTime` |
-| `dataUltimaAtualizacao` | `LocalDateTime` |
-| `tamanho` | `String` |
-| `cor` | `String` |
-| `categoria` | `CategoriaPeca` |
+| `ABERTO` (Aberto) | `ORCANDO` (Orçando) |
+| `PENDENTE_DE_PAGAMENTO` (Pendente de Pagamento) | `PENDENTE_DE_PAGAMENTO` (Pendente de Pagamento) |
+| `PAGO` (Pago) | `PAGO_FATURADO` (Pago/Faturado) |
+| `EM_EXECUCAO` (Em Execução) | `ENTREGUE` (Entregue) |
+| `EXECUTADO` (Executado) | |
 
-### 🛠️ Serviço
-A classe `Servico` representa um serviço cadastrado no sistema.
+Qualquer status do respectivo enum pode ser selecionado: o enunciado não determina uma sequência de transições. A adição de itens não movimenta estoque nem processa pagamentos, operações não solicitadas nesta OAT.
 
-| Atributo | Tipo |
-|---|---|
-| `codigo` | `Long` |
-| `nome` | `String` |
-| `tempoEstimadoMinutos` | `Integer` |
-| `custoTabelado` | `Double` |
-| `dataCriacao` | `LocalDateTime` |
-| `dataUltimaAtualizacao` | `LocalDateTime` |
+## DTOs, mappers e modelo
 
-### Categorias de Peças
-As categorias de peças são representadas pelo Enum `CategoriaPeca`:
-- `MOTOR`
-- `SUSPENSAO`
-- `FREIOS`
-- `ELETRICA`
-- `ACESSORIOS`
+Todos os corpos de entrada e saída dos controllers são DTOs. `PecaMapper` e `ServicoMapper` convertem os cadastros existentes nos dois sentidos. Código e datas desses DTOs são somente de leitura no JSON e são gerados/controlados pelo servidor.
 
----
+`CriarOrdemServicoDTO` e `CriarPedidoPecasDTO` recebem dados de criação; DTOs específicos recebem itens e alterações de status. `OrdemServicoDTO`, `PedidoPecasDTO` e `ItemPedidoDTO` representam as respostas. Os mappers fazem as conversões, inclusive as associações, sem expor entidades nos objetos aninhados.
 
-## Endpoints da API
+`ItemPedido` é a entidade associativa: referencia um `PedidoPecas`, uma `Peca` e a quantidade. O DTO omite a referência de volta ao pedido, evitando recursão no JSON. `OrdemServico.Builder` é a única forma de construir uma OS; cria instâncias independentes e copia suas listas de associações.
 
-A aplicação possui endpoints para gerenciamento de Peças e Serviços.
-A URL base da aplicação é: `http://localhost:8080`
+## Documentação e entrega
 
-### 🔩 Endpoints de Peças
+- [Diagrama de classes atualizado](documentacao/diagrama-classes.md): entidades, enums, DTOs, mappers, controllers, Singletons e Builder.
+- [Diagrama de atividade](documentacao/diagrama-atividade.md): lógica do controller de `PATCH /api/ordens-servico/{codigo}/status`.
+- Apresentação: `apresentacoes/mecaniQA_api_oat2_Teresina.pdf`, no modelo indicado no enunciado.
+- Testes: `src/test/java/com/mecaniqa/api/Oat2IntegrationTest.java` cobre US01-US05, status, associações, erros, proteção de metadados, Builder e regressão do CRUD.
 
-#### ➕ Cadastrar Peça
-`POST /api/pecas`
-
-**Exemplo de requisição:**
-```json
-{
-  "codigoBarras": "7891234567890",
-  "fornecedorMarca": "Bosch",
-  "quantidadeEstoque": 10,
-  "precoCusto": 50.0,
-  "precoVenda": 80.0,
-  "tamanho": "M",
-  "cor": "Preto",
-  "categoria": "ELETRICA"
-}
-```
-**Resposta esperada:** `201 Created`
-Ao cadastrar uma nova peça:
-- A peça recebe um código automático.
-- A data de cadastro é registrada.
-- A data da última atualização é registrada.
-- A peça é gravada na memória através do `PecaRepository`.
-- O recurso criado é retornado.
-
-####  Listar Peças
-`GET /api/pecas`
-- **Resposta esperada:** `200 OK`
-- Retorna todas as peças cadastradas na memória.
-
-#### Buscar Peça por Código
-`GET /api/pecas/{codigo}`
-- **Exemplo:** `GET /api/pecas/1`
-- **Resposta esperada:** `200 OK` (Caso a peça seja encontrada).
-
-#### Buscar Peça Inexistente
-`GET /api/pecas/{codigo}`
-- **Exemplo:** `GET /api/pecas/999999`
-- Caso o código informado não esteja cadastrado no Singleton, a API retorna: `404 Not Found` (Essa validação é realizada manualmente no `PecaController`).
-
-#### Atualizar Peça
-`PUT /api/pecas/{codigo}`
-
-**Exemplo de requisição:**
-```json
-{
-  "codigoBarras": "7891234567890",
-  "fornecedorMarca": "Bosch",
-  "quantidadeEstoque": 15,
-  "precoCusto": 55.0,
-  "precoVenda": 90.0,
-  "tamanho": "M",
-  "cor": "Preto",
-  "categoria": "ELETRICA"
-}
-```
-- **Resposta esperada:** `200 OK` (A data de cadastro original é mantida e a data da última atualização é modificada).
-- **Caso a peça não exista:** `404 Not Found`
-
-#### 🗑️ Excluir Peça
-`DELETE /api/pecas/{codigo}`
-- **Resposta esperada:** `204 No Content`
-- **Caso a peça não exista:** `404 Not Found`
-
----
-
-### 🛠️ Endpoints de Serviços
-
-#### ➕ Cadastrar Serviço
-`POST /api/servicos`
-
-**Exemplo de requisição:**
-```json
-{
-  "nome": "Troca de óleo",
-  "tempoEstimadoMinutos": 60,
-  "custoTabelado": 150.0
-}
-```
-**Resposta esperada:** `201 Created`
-Ao cadastrar um serviço:
-- É gerado um código automático.
-- A data de criação é registrada.
-- A data da última atualização é registrada.
-- O serviço é gravado em memória através do `ServicoRepository`.
-
-#### Listar Serviços
-`GET /api/servicos`
-- **Resposta esperada:** `200 OK`
-
-####  Buscar Serviço por Código
-`GET /api/servicos/{codigo}`
-- **Exemplo:** `GET /api/servicos/1`
-- **Resposta esperada:** `200 OK` (Caso o serviço exista) ou `404 Not Found` (Caso contrário).
-
-#### Atualizar Serviço
-`PUT /api/servicos/{codigo}`
-
-**Exemplo de requisição:**
-```json
-{
-  "nome": "Troca de óleo completa",
-  "tempoEstimadoMinutos": 90,
-  "custoTabelado": 200.0
-}
-```
-- **Resposta esperada:** `200 OK`
-- **Caso o serviço não exista:** `404 Not Found`
-
-#### 🗑️ Excluir Serviço
-`DELETE /api/servicos/{codigo}`
-- **Resposta esperada:** `204 No Content`
-- **Caso o serviço não exista:** `404 Not Found`
-
----
-
-##  Resumo das Rotas
-
-### Peças
-| Método | Endpoint | Descrição |
-|---|---|---|
-| `POST` | `/api/pecas` | Cadastrar uma peça |
-| `GET` | `/api/pecas` | Listar todas as peças |
-| `GET` | `/api/pecas/{codigo}` | Buscar uma peça |
-| `PUT` | `/api/pecas/{codigo}` | Atualizar uma peça |
-| `DELETE`| `/api/pecas/{codigo}` | Excluir uma peça |
-
-### Serviços
-| Método | Endpoint | Descrição |
-|---|---|---|
-| `POST` | `/api/servicos` | Cadastrar um serviço |
-| `GET` | `/api/servicos` | Listar todos os serviços |
-| `GET` | `/api/servicos/{codigo}` | Buscar um serviço |
-| `PUT` | `/api/servicos/{codigo}` | Atualizar um serviço |
-| `DELETE`| `/api/servicos/{codigo}` | Excluir um serviço |
-
----
-
-## Armazenamento em Memória
-
-A aplicação não utiliza banco de dados. Os dados são armazenados temporariamente em memória utilizando os repositórios:
-- `PecaRepository`
-- `ServicoRepository`
-
-Os dois repositórios utilizam o padrão de projeto **Singleton**. Isso garante que exista apenas uma instância de cada repositório durante a execução da aplicação.
-
-**Exemplo conceitual:**
-```text
-Controller
-    ↓
-Repository Singleton
-    ↓
-Lista em Memória
-```
-Os dados permanecem disponíveis enquanto a aplicação estiver em execução. Ao reiniciar a API, os dados armazenados em memória são perdidos.
-
----
-
-## 🧪 Validações Realizadas
-
-### POST — 201 Created
-Foi validada a execução da requisição `POST /api/pecas`. O fluxo ocorre da seguinte forma:
-`POST` → `PecaController` → `PecaRepository.getInstance()` → `save()` → Gravação em `ArrayList` na memória → `201 Created`.
-A peça cadastrada recebe um código automático e pode ser consultada posteriormente.
-
-### GET — 404 Not Found
-Também foi validada a tentativa de buscar uma peça que ainda não foi cadastrada no Singleton (Exemplo: `GET /api/pecas/999999`). Quando o código não é encontrado, `404 Not Found` é retornado pela API.
-
----
-
-## 📬 Collection do Postman
-
-O projeto possui uma Collection do Postman com as rotas da API.
-**Arquivo:** `postman/mecaniQA-api.postman_collection.json`
-
-**Como importar:**
-1. Abra o Postman.
-2. Clique em **Import**.
-3. Selecione o arquivo `mecaniQA-api.postman_collection.json`.
-4. Execute as requisições.
-
-A Collection contém as rotas de Peças e Serviços, englobando Cadastro, Listagem, Busca por código, Atualização e Exclusão.
-
----
-
-##  Diagrama de Classes UML
-
-O projeto possui um Diagrama de Classes representando a estrutura principal da aplicação.
-**Arquivo:** `documentacao/diagrama-classes.md`
-
-O diagrama representa as seguintes classes:
-```text
-PecaController
-ServicoController
-        ↓
-PecaRepository
-ServicoRepository
-        ↓
-Peca
-Servico
-        ↓
-CategoriaPeca
-```
-Os repositórios são identificados como estruturas responsáveis pelo armazenamento dos dados em memória utilizando o padrão Singleton.
-
----
-
-## Como Executar o Projeto
-
-**Pré-requisitos:**
-É necessário possuir instalado:
-- Java 21
-- Git
-
-**1. Clonar o Repositório**
-```bash
-git clone <URL_DO_REPOSITORIO>
-```
-
-**2. Acessar a Pasta do Projeto**
-```bash
-cd mecaniQA-api-teresina
-```
-
-**3. Executar a Aplicação**
-- **Windows:**
-  ```cmd
-  gradlew.bat bootRun
-  ```
-- **Linux ou macOS:**
-  ```bash
-  ./gradlew bootRun
-  ```
-
----
-
-## Servidor
-
-Por padrão, a aplicação é executada na porta `8080`.
-Portanto, a URL base é: `http://localhost:8080`
-
----
-
-## Códigos HTTP Utilizados
-
-| Código | Status | Utilização |
-|---|---|---|
-| `200` | OK | Consulta ou atualização realizada com sucesso |
-| `201` | Created | Novo recurso criado com sucesso |
-| `204` | No Content | Recurso excluído com sucesso |
-| `400` | Bad Request | Requisição inválida |
-| `404` | Not Found | Recurso não encontrado |
-
----
-
-##  Estrutura Completa do Projeto
-
-```text
-mecaniQA-api-teresina/
-│
-├── apresentacoes/
-│
-├── documentacao/
-│   └── diagrama-classes.md
-│
-├── postman/
-│   └── mecaniQA-api.postman_collection.json
-│
-├── src/
-│   └── main/
-│       ├── java/
-│       │   └── com/
-│       │       └── mecaniqa/
-│       │           └── api/
-│       │               ├── MecaniQaApiApplication.java
-│       │               │
-│       │               ├── controller/
-│       │               │   ├── PecaController.java
-│       │               │   └── ServicoController.java
-│       │               │
-│       │               ├── model/
-│       │               │   ├── Peca.java
-│       │               │   ├── Servico.java
-│       │               │   └── CategoriaPeca.java
-│       │               │
-│       │               └── repository/
-│       │                   ├── PecaRepository.java
-│       │                   └── ServicoRepository.java
-│       │
-│       └── resources/
-│           └── application.properties
-│
-├── build.gradle.kts
-├── gradlew
-├── gradlew.bat
-├── settings.gradle.kts
-└── README.md
-```
-
----
-
-## Funcionalidades Implementadas
-- [x] Cadastro de peças;
-- [x] Listagem de peças;
-- [x] Busca de peça por código;
-- [x] Atualização de peças;
-- [x] Exclusão de peças;
-- [x] Cadastro de serviços;
-- [x] Listagem de serviços;
-- [x] Busca de serviço por código;
-- [x] Atualização de serviços;
-- [x] Exclusão de serviços;
-- [x] Geração automática de códigos;
-- [x] Registro automático de datas;
-- [x] Armazenamento em memória;
-- [x] Implementação do padrão Singleton;
-- [x] Retornos HTTP adequados;
-- [x] Tratamento de recursos inexistentes;
-- [x] Collection para testes no Postman;
-- [x] Diagrama de Classes UML.
-
+A entrega avaliada deve estar na branch `main` deste repositório. O PDF também deve ser submetido pela equipe no formulário do Blackboard indicado no enunciado. A apresentação oral tem duração máxima de sete minutos.

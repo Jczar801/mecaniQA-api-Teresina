@@ -1,0 +1,35 @@
+@startuml
+skinparam backgroundColor white
+skinparam shadowing false
+title
+PATCH /api/ordens-servico/{codigo}/status
+Visão exclusiva do Controller
+end title
+start
+:Receber codigo e
+AtualizarStatusOrdemServicoDTO;
+if (dto.status é nulo?) then (sim)
+  :Lançar ResponseStatusException
+HTTP 400;
+  stop
+else (não)
+endif
+:Obter bloqueios de pedidos
+e ordens de serviço;
+:Consultar repository.findById(codigo);
+if (Ordem encontrada?) then (não)
+  :Lançar ResponseStatusException
+HTTP 404;
+  :Liberar bloqueios;
+  stop
+else (sim)
+endif
+:Definir status solicitado;
+:Atualizar dataUltimaAtualizacao;
+:Chamar repository.save(ordem);
+:Converter com OrdemServicoMapper.toDTO;
+:Construir ResponseEntity.ok(dto);
+:Liberar bloqueios;
+:Retornar HTTP 200 com OrdemServicoDTO;
+stop
+@enduml
