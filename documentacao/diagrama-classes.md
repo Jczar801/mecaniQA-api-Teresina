@@ -223,8 +223,7 @@ direction LR
     ItemPedido "0..*" --> "1" Peca : peca
     OrdemServico "0..*" --> "0..*" Servico : servicos
     OrdemServico "0..*" --> "0..*" PedidoPecas : pedidosPecas
-    OrdemServico *-- OrdemServicoBuilder : Builder (estatica aninhada)
-    OrdemServico ..> OrdemServicoBuilder : builder()
+    OrdemServico *-- OrdemServicoBuilder : classe estatica aninhada
     OrdemServicoBuilder ..> OrdemServico : build() constroi
     OrdemServicoMapper ..> OrdemServicoBuilder : usa
     OrdemServicoDTO --> ServicoDTO
@@ -309,10 +308,7 @@ direction LR
       +build() OrdemServico
     }
     OrdemServico *-- Builder : classe estatica aninhada
-    OrdemServico ..> Builder : builder() devolve
     Builder ..> OrdemServico : build() chama o construtor privado
-    Builder "1" o-- "0..*" Servico : acumula
-    Builder "1" o-- "0..*" PedidoPecas : acumula
 ```
 
 Os métodos `descricao`, `adicionarServico` e `adicionarPedidoPecas` devolvem

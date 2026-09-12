@@ -149,7 +149,7 @@ class Oat2IntegrationTest {
         assertTrue(Modifier.isStatic(OrdemServico.Builder.class.getModifiers()));
         assertSame(OrdemServico.class, OrdemServico.Builder.class.getEnclosingClass());
         OrdemServico.Builder builder = OrdemServico.builder();
-        assertSame(builder, builder.descricao("Revisão").adicionarServico(new Servico()));
+        assertSame(builder, builder.descricao("Revisão").adicionarServico(new Servico()).adicionarPedidoPecas(new PedidoPecas()));
         OrdemServico ordem = builder.build();
         assertEquals("Revisão", ordem.getDescricao());
         assertEquals(StatusOrdemServico.ABERTO, ordem.getStatus());
