@@ -1,5 +1,7 @@
 # Diagrama de Classes - OAT 2
 
+## Visão geral
+
 ```mermaid
 classDiagram
 direction LR
@@ -208,6 +210,7 @@ direction LR
       -String descricao
       -List~Servico~ servicos
       -List~PedidoPecas~ pedidosPecas
+      -OrdemServicoBuilder()
       +descricao(String) Builder
       +adicionarServico(Servico) Builder
       +adicionarPedidoPecas(PedidoPecas) Builder
@@ -220,7 +223,9 @@ direction LR
     ItemPedido "0..*" --> "1" Peca : peca
     OrdemServico "0..*" --> "0..*" Servico : servicos
     OrdemServico "0..*" --> "0..*" PedidoPecas : pedidosPecas
-    OrdemServicoBuilder ..> OrdemServico : constroi
+    OrdemServico *-- OrdemServicoBuilder : Builder (estatica aninhada)
+    OrdemServico ..> OrdemServicoBuilder : builder()
+    OrdemServicoBuilder ..> OrdemServico : build() constroi
     OrdemServicoMapper ..> OrdemServicoBuilder : usa
     OrdemServicoDTO --> ServicoDTO
     OrdemServicoDTO --> PedidoPecasDTO
@@ -271,5 +276,49 @@ direction LR
 ```
 
 `OrdemServicoBuilder` representa a classe estática interna `OrdemServico.Builder`. As associações usam as entidades existentes em memória. Construtores e acessores estão explícitos no código; getters/setters repetitivos foram omitidos do desenho. Os campos e métodos estáticos dos Singletons garantem uma instância de cada repositório.
+
+## Recorte: estrutura do Builder
+
+Detalhe do padrão criacional exigido pela OAT 2 para a Ordem de Serviço. A
+`Builder` é a classe estática aninhada em `OrdemServico`; ambos os construtores
+são privados, de modo que `OrdemServico.builder()` é o único ponto de entrada.
+
+```mermaid
+classDiagram
+direction LR
+    class OrdemServico {
+      -Long codigo
+      -String descricao
+      -StatusOrdemServico status
+      -LocalDateTime dataCriacao
+      -LocalDateTime dataUltimaAtualizacao
+      -List~Servico~ servicos
+      -List~PedidoPecas~ pedidosPecas
+      -OrdemServico(Builder)
+      +builder() Builder$
+    }
+    class Builder {
+      <<Builder>>
+      -String descricao
+      -List~Servico~ servicos
+      -List~PedidoPecas~ pedidosPecas
+      -Builder()
+      +descricao(String) Builder
+      +adicionarServico(Servico) Builder
+      +adicionarPedidoPecas(PedidoPecas) Builder
+      +build() OrdemServico
+    }
+    OrdemServico *-- Builder : classe estatica aninhada
+    OrdemServico ..> Builder : builder() devolve
+    Builder ..> OrdemServico : build() chama o construtor privado
+    Builder "1" o-- "0..*" Servico : acumula
+    Builder "1" o-- "0..*" PedidoPecas : acumula
+```
+
+Os métodos `descricao`, `adicionarServico` e `adicionarPedidoPecas` devolvem
+`Builder` (a própria instância, `this`), o que permite o encadeamento. O
+construtor privado `OrdemServico(Builder)` copia as coleções com `List.copyOf` e
+define `status`, `dataCriacao` e `dataUltimaAtualizacao`, campos que o Builder
+não expõe. Ver [OAT 2 - Padrão Builder na Ordem de Serviço](oat2-padrao-builder.md).
 
 [Versão PDF do diagrama completo](../mecaniQA_api_Teresina.pdf).

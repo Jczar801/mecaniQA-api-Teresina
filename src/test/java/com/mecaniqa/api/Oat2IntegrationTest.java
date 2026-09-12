@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mecaniqa.api.model.*;
 import com.mecaniqa.api.repository.*;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Modifier;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -134,5 +136,23 @@ class Oat2IntegrationTest {
         assertThrows(UnsupportedOperationException.class, () -> primeira.getServicos().add(new Servico()));
         assertSame(OrdemServicoRepository.getInstance(), OrdemServicoRepository.getInstance());
         assertSame(PedidoPecasRepository.getInstance(), PedidoPecasRepository.getInstance());
+    }
+
+    @Test void ordemServicoSoPodeSerConstruidaPeloBuilder() throws Exception {
+        Constructor<?>[] construtores = OrdemServico.class.getDeclaredConstructors();
+        assertEquals(1, construtores.length);
+        assertTrue(Modifier.isPrivate(construtores[0].getModifiers()));
+        assertArrayEquals(new Class<?>[]{OrdemServico.Builder.class}, construtores[0].getParameterTypes());
+        assertThrows(NoSuchMethodException.class, () -> OrdemServico.class.getDeclaredConstructor());
+        Constructor<?> construtorDoBuilder = OrdemServico.Builder.class.getDeclaredConstructor();
+        assertTrue(Modifier.isPrivate(construtorDoBuilder.getModifiers()));
+        assertTrue(Modifier.isStatic(OrdemServico.Builder.class.getModifiers()));
+        assertSame(OrdemServico.class, OrdemServico.Builder.class.getEnclosingClass());
+        OrdemServico.Builder builder = OrdemServico.builder();
+        assertSame(builder, builder.descricao("Revisão").adicionarServico(new Servico()));
+        OrdemServico ordem = builder.build();
+        assertEquals("Revisão", ordem.getDescricao());
+        assertEquals(StatusOrdemServico.ABERTO, ordem.getStatus());
+        assertNotNull(ordem.getDataCriacao());
     }
 }

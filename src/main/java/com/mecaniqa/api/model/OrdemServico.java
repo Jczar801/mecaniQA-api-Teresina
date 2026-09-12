@@ -40,7 +40,7 @@ public class OrdemServico {
         private final List<Servico> servicos = new ArrayList<>();
         private final List<PedidoPecas> pedidosPecas = new ArrayList<>();
 
-        public Builder() {}
+        private Builder() {}
         public Builder descricao(String descricao) { this.descricao = descricao; return this; }
         public Builder adicionarServico(Servico servico) {
             servicos.add(Objects.requireNonNull(servico));
