@@ -105,14 +105,13 @@ Todos os corpos de entrada e saída dos controllers são DTOs. `PecaMapper` e `S
 
 `CriarOrdemServicoDTO` e `CriarPedidoPecasDTO` recebem dados de criação; DTOs específicos recebem itens e alterações de status. `OrdemServicoDTO`, `PedidoPecasDTO` e `ItemPedidoDTO` representam as respostas. Os mappers fazem as conversões, inclusive as associações, sem expor entidades nos objetos aninhados.
 
-`ItemPedido` é a entidade associativa: referencia um `PedidoPecas`, uma `Peca` e a quantidade. O DTO omite a referência de volta ao pedido, evitando recursão no JSON. `OrdemServico.Builder` é a única forma de construir uma OS; cria instâncias independentes e copia suas listas de associações. O construtor de `OrdemServico` é privado e recebe apenas o Builder, e o construtor do próprio Builder também é privado: `OrdemServico.builder()` é o único ponto de entrada, e `new OrdemServico()` não compila.
+`ItemPedido` é a entidade associativa: referencia um `PedidoPecas`, uma `Peca` e a quantidade. O DTO omite a referência de volta ao pedido, evitando recursão no JSON. `OrdemServico.Builder` é a única forma de construir uma OS; cria instâncias independentes e copia suas listas de associações.
 
 ## Documentação e entrega
 
 - [Diagrama de classes atualizado](documentacao/diagrama-classes.md): entidades, enums, DTOs, mappers, controllers, Singletons e Builder.
 - [Diagrama de atividade](documentacao/diagrama-atividade.md): lógica do controller de `PATCH /api/ordens-servico/{codigo}/status`.
-- [Padrão Builder na Ordem de Serviço](documentacao/oat2-padrao-builder.md): fatos extraídos da OAT 2, anatomia do Builder sem Lombok, motivo do construtor privado e o cenário de teste do QA.
-- Apresentação: entregue no modelo indicado no enunciado, pelo formulário do Blackboard; o arquivo não é versionado neste repositório.
-- Testes: `src/test/java/com/mecaniqa/api/Oat2IntegrationTest.java` cobre US01-US05, status, associações, erros, proteção de metadados, a obrigatoriedade do Builder e regressão do CRUD.
+- Apresentação: `apresentacoes/mecaniQA_api_oat2_Teresina.pdf`, no modelo indicado no enunciado.
+- Testes: `src/test/java/com/mecaniqa/api/Oat2IntegrationTest.java` cobre US01-US05, status, associações, erros, proteção de metadados, Builder e regressão do CRUD.
 
 A entrega avaliada deve estar na branch `main` deste repositório. O PDF também deve ser submetido pela equipe no formulário do Blackboard indicado no enunciado. A apresentação oral tem duração máxima de sete minutos.
