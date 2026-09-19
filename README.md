@@ -111,7 +111,7 @@ Todos os corpos de entrada e saída dos controllers são DTOs. `PecaMapper` e `S
 
 - [Diagrama de classes atualizado](documentacao/diagrama-classes.md): entidades, enums, DTOs, mappers, controllers, Singletons e Builder.
 - [Diagrama de atividade](documentacao/diagrama-atividade.md): lógica do controller de `PATCH /api/ordens-servico/{codigo}/status`.
-- Apresentação: `apresentacoes/mecaniQA_api_oat2_Teresina.pdf`, no modelo indicado no enunciado.
+- Apresentação: [`mecaniQA_api_Teresina.pdf`](../mecaniQA_api_Teresina.pdf), no modelo indicado no enunciado.
 - Testes: `src/test/java/com/mecaniqa/api/Oat2IntegrationTest.java` cobre US01-US05, status, associações, erros, proteção de metadados, Builder e regressão do CRUD.
 
 A entrega avaliada deve estar na branch `main` deste repositório. O PDF também deve ser submetido pela equipe no formulário do Blackboard indicado no enunciado. A apresentação oral tem duração máxima de sete minutos.
