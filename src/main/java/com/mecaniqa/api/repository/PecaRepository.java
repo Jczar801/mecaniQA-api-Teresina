@@ -1,6 +1,11 @@
 package com.mecaniqa.api.repository;
 
+import com.mecaniqa.api.config.ConexaoBanco;
 import com.mecaniqa.api.model.Peca;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -35,5 +40,17 @@ public class PecaRepository {
     }
     public synchronized boolean deleteById(Long codigo) {
         return pecas.removeIf(p -> p.getCodigo().equals(codigo));
+    }
+
+    public int contarNoBanco() {
+        String sql = "SELECT COUNT(*) FROM pecas";
+        try (Connection conexao = ConexaoBanco.getConexao();
+             PreparedStatement stmt = conexao.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            rs.next();
+            return rs.getInt(1);
+        } catch (SQLException e) {
+            throw new IllegalStateException("Erro ao consultar peças no banco de dados.", e);
+        }
     }
 }
