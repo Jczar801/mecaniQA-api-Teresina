@@ -1,6 +1,7 @@
 package com.mecaniqa.api.controller;
 
 import com.mecaniqa.api.dto.*;
+import com.mecaniqa.api.exception.ErroAcessoDadosException;
 import com.mecaniqa.api.mapper.OrdemServicoMapper;
 import com.mecaniqa.api.model.*;
 import com.mecaniqa.api.repository.*;
@@ -20,34 +21,42 @@ public class OrdemServicoController {
     private final PedidoPecasRepository pedidos = PedidoPecasRepository.getInstance();
 
     @PostMapping
-    public ResponseEntity<OrdemServicoDTO> criar(@RequestBody CriarOrdemServicoDTO dto) {
-        List<Servico> selecionados = ids(dto.getCodigosServicos()).stream().map(codigo ->
-                servicos.findById(codigo).orElseThrow(() ->
-                        new ResponseStatusException(HttpStatus.NOT_FOUND, "Serviço não encontrado"))).toList();
-        synchronized (pedidos) {
-            List<PedidoPecas> materiais = ids(dto.getCodigosPedidosPecas()).stream().map(codigo ->
-                    pedidos.findById(codigo).orElseThrow(() ->
-                            new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido não encontrado"))).toList();
-            OrdemServico ordem = OrdemServicoMapper.toModel(dto, selecionados, materiais);
-            synchronized (repository) {
-                return ResponseEntity.status(HttpStatus.CREATED)
-                        .body(OrdemServicoMapper.toDTO(repository.save(ordem)));
+    public ResponseEntity<Object> criar(@RequestBody CriarOrdemServicoDTO dto) {
+        try {
+            List<Servico> selecionados = ids(dto.getCodigosServicos()).stream().map(codigo ->
+                    servicos.findById(codigo).orElseThrow(() ->
+                            new ResponseStatusException(HttpStatus.NOT_FOUND, "Serviço não encontrado"))).toList();
+            synchronized (pedidos) {
+                List<PedidoPecas> materiais = ids(dto.getCodigosPedidosPecas()).stream().map(codigo ->
+                        pedidos.findById(codigo).orElseThrow(() ->
+                                new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido não encontrado"))).toList();
+                OrdemServico ordem = OrdemServicoMapper.toModel(dto, selecionados, materiais);
+                synchronized (repository) {
+                    return ResponseEntity.status(HttpStatus.CREATED)
+                            .body(OrdemServicoMapper.toDTO(repository.save(ordem)));
+                }
             }
+        } catch (ErroAcessoDadosException causa) {
+            return erroBancoDeDados(causa);
         }
     }
 
     @PatchMapping("/{codigo}/status")
-    public ResponseEntity<OrdemServicoDTO> modificarStatus(@PathVariable Long codigo,
+    public ResponseEntity<Object> modificarStatus(@PathVariable Long codigo,
             @RequestBody AtualizarStatusOrdemServicoDTO dto) {
-        if (dto.getStatus() == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Status obrigatório");
-        synchronized (pedidos) {
-            synchronized (repository) {
-                OrdemServico ordem = repository.findById(codigo).orElseThrow(() ->
-                        new ResponseStatusException(HttpStatus.NOT_FOUND, "Ordem de serviço não encontrada"));
-                ordem.setStatus(dto.getStatus());
-                ordem.setDataUltimaAtualizacao(LocalDateTime.now().truncatedTo(ChronoUnit.MICROS));
-                return ResponseEntity.ok(OrdemServicoMapper.toDTO(repository.save(ordem)));
+        try {
+            if (dto.getStatus() == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Status obrigatório");
+            synchronized (pedidos) {
+                synchronized (repository) {
+                    OrdemServico ordem = repository.findById(codigo).orElseThrow(() ->
+                            new ResponseStatusException(HttpStatus.NOT_FOUND, "Ordem de serviço não encontrada"));
+                    ordem.setStatus(dto.getStatus());
+                    ordem.setDataUltimaAtualizacao(LocalDateTime.now().truncatedTo(ChronoUnit.MICROS));
+                    return ResponseEntity.ok(OrdemServicoMapper.toDTO(repository.save(ordem)));
+                }
             }
+        } catch (ErroAcessoDadosException causa) {
+            return erroBancoDeDados(causa);
         }
     }
 
@@ -57,5 +66,9 @@ public class OrdemServicoController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Códigos devem ser positivos");
         }
         return codigos.stream().distinct().toList();
+    }
+
+    private ResponseEntity<Object> erroBancoDeDados(ErroAcessoDadosException causa) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ErroRespostaDTO(causa.getMessage()));
     }
 }

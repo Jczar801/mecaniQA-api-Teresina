@@ -1,10 +1,20 @@
 # MecâniQA API - Teresina
 
-API REST em Java 21, Spring Boot 3.5.5 e Gradle. A OAT 2 evolui o CRUD de peças e serviços da OAT 1 com ordens de serviço e pedidos de peças.
+API REST em Java 21, Spring Boot 3.5.5 e Gradle. A OAT 2 evolui o CRUD de peças e serviços da OAT 1 com ordens de serviço e pedidos de peças; a OAT 3 substitui a persistência em memória por JDBC puro sobre MySQL.
+
+## Banco de dados
+
+O banco oficial é o **MySQL**, acessado via **JDBC puro** (sem JPA/Hibernate). Antes de rodar a aplicação ou os testes, é preciso ter um MySQL acessível e criar o schema:
+
+```powershell
+mysql -h 127.0.0.1 -u root < script_mecaniqa.sql
+```
+
+A conexão é configurada em `src/main/resources/application.properties` (`mecaniqa.db.url`, `mecaniqa.db.username`, `mecaniqa.db.password`) e lida por `DatabaseConnection`. Se o banco estiver fora do ar ou as credenciais estiverem erradas, a API responde com status 500 e uma mensagem de erro clara (`ErroAcessoDadosException`), em vez de travar ou devolver um erro genérico.
 
 ## Execução e testes
 
-É necessário um JDK 21. Configure `JAVA_HOME` para esse JDK.
+É necessário um JDK 21 e o MySQL com o schema acima já criado. Configure `JAVA_HOME` para esse JDK.
 
 ```powershell
 .\gradlew.bat bootRun
@@ -13,7 +23,7 @@ API REST em Java 21, Spring Boot 3.5.5 e Gradle. A OAT 2 evolui o CRUD de peças
 
 No Linux/macOS, use `./gradlew bootRun` e `./gradlew test`. URL base: `http://localhost:8080`.
 
-Os dados permanecem exclusivamente em memória e são perdidos ao reiniciar a aplicação. Os repositórios usam Singleton estático; não há banco de dados nem Lombok. Construtores e acessores são explícitos.
+Os repositórios (`PecaRepository`, `ServicoRepository`, `PedidoPecasRepository`, `OrdemServicoRepository`) herdam de `RepositorioJdbcBase`, que aplica o padrão Template Method: abrir conexão, preparar o comando, executar e fechar (via try-with-resources) ficam na classe base, e cada repositório só fornece o SQL, os parâmetros e o mapeamento da linha. Não há Lombok; construtores e acessores são explícitos. Os repositórios continuam Singletons estáticos, mas os dados agora persistem no MySQL e sobrevivem a reinícios da aplicação.
 
 ## Endpoints
 
@@ -112,6 +122,6 @@ Todos os corpos de entrada e saída dos controllers são DTOs. `PecaMapper` e `S
 - [Diagrama de classes atualizado](documentacao/diagrama-classes.md): entidades, enums, DTOs, mappers, controllers, Singletons e Builder.
 - [Diagrama de atividade](documentacao/diagrama-atividade.md): lógica do controller de `PATCH /api/ordens-servico/{codigo}/status`.
 - Apresentação: [`mecaniQA_api_oat2_Teresina.pdf`](../mecaniQA_api_oat2_Teresina.pdf), no modelo indicado no enunciado.
-- Testes: `src/test/java/com/mecaniqa/api/Oat2IntegrationTest.java` cobre US01-US05, status, associações, erros, proteção de metadados, Builder e regressão do CRUD. `QaCamposInternosTest.java` garante que o payload mínimo (sem código, datas ou status) não quebra a API.
+- Testes: `src/test/java/com/mecaniqa/api/Oat2IntegrationTest.java` cobre US01-US05, status, associações, erros, proteção de metadados, Builder e regressão do CRUD. `QaCamposInternosTest.java` garante que o payload mínimo (sem código, datas ou status) não quebra a API. `Oat3PersistindoTest.java` e `Oat3TemplateMethodTest.java` cobrem a conexão JDBC e o fechamento garantido de conexões; `Oat3IntegracaoFinalTest.java` executa o fluxo completo pela API e confere, direto no MySQL, que os dados e os relacionamentos foram persistidos corretamente.
 
 A entrega avaliada deve estar na branch `main` deste repositório. O PDF também deve ser submetido pela equipe no formulário do Blackboard indicado no enunciado. A apresentação oral tem duração máxima de sete minutos.
