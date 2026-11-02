@@ -1,56 +1,77 @@
 package com.mecaniqa.api.repository;
 
-import com.mecaniqa.api.config.ConexaoBanco;
+import com.mecaniqa.api.mapper.PecaRowMapper;
 import com.mecaniqa.api.model.Peca;
-import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
+import java.sql.Timestamp;
+import java.sql.Types;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicLong;
 
-public class PecaRepository {
+public class PecaRepository extends RepositorioJdbcBase<Peca> {
     private static final PecaRepository INSTANCE = new PecaRepository();
-    private final List<Peca> pecas = new ArrayList<>();
-    private final AtomicLong sequence = new AtomicLong();
 
     private PecaRepository() {}
     public static PecaRepository getInstance() { return INSTANCE; }
 
-    public synchronized Peca save(Peca peca) {
+    public Peca save(Peca peca) {
         if (peca.getCodigo() == null) {
-            peca.setCodigo(sequence.incrementAndGet());
-            pecas.add(peca);
-            return peca;
+            long codigoGerado = executarInsercao(
+                    "INSERT INTO peca (codigo_barras, fornecedor_marca, quantidade_estoque, preco_custo, "
+                            + "preco_venda, data_cadastro, data_ultima_atualizacao, tamanho, cor, categoria) "
+                            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    comando -> vincularCampos(comando, peca));
+            peca.setCodigo(codigoGerado);
+        } else {
+            executarAtualizacao(
+                    "UPDATE peca SET codigo_barras=?, fornecedor_marca=?, quantidade_estoque=?, preco_custo=?, "
+                            + "preco_venda=?, data_cadastro=?, data_ultima_atualizacao=?, tamanho=?, cor=?, categoria=? "
+                            + "WHERE codigo=?",
+                    comando -> {
+                        vincularCampos(comando, peca);
+                        comando.setLong(11, peca.getCodigo());
+                    });
         }
-        for (int i = 0; i < pecas.size(); i++) {
-            if (pecas.get(i).getCodigo().equals(peca.getCodigo())) {
-                pecas.set(i, peca);
-                return peca;
-            }
-        }
-        return null;
+        return peca;
     }
 
-    public synchronized List<Peca> findAll() { return new ArrayList<>(pecas); }
-    public synchronized Optional<Peca> findById(Long codigo) {
-        return pecas.stream().filter(p -> p.getCodigo().equals(codigo)).findFirst();
-    }
-    public synchronized boolean deleteById(Long codigo) {
-        return pecas.removeIf(p -> p.getCodigo().equals(codigo));
+    public List<Peca> findAll() {
+        return consultar("SELECT * FROM peca ORDER BY codigo", comando -> {}, PecaRowMapper::map);
     }
 
-    public int contarNoBanco() {
-        String sql = "SELECT COUNT(*) FROM pecas";
-        try (Connection conexao = ConexaoBanco.getConexao();
-             PreparedStatement stmt = conexao.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
-            rs.next();
-            return rs.getInt(1);
-        } catch (SQLException e) {
-            throw new IllegalStateException("Erro ao consultar peças no banco de dados.", e);
-        }
+    public Optional<Peca> findById(Long codigo) {
+        return consultarUm("SELECT * FROM peca WHERE codigo = ?", comando -> comando.setLong(1, codigo), PecaRowMapper::map);
+    }
+
+    public boolean deleteById(Long codigo) {
+        return executarAtualizacao("DELETE FROM peca WHERE codigo = ?", comando -> comando.setLong(1, codigo)) > 0;
+    }
+
+    /** Consulta manual simples via JDBC puro, direto na tabela peca do MySQL. */
+    public Optional<Peca> buscarPorCodigoBarrasNoBanco(String codigoBarras) {
+        return consultarUm("SELECT * FROM peca WHERE codigo_barras = ?",
+                comando -> comando.setString(1, codigoBarras), PecaRowMapper::map);
+    }
+
+    private void vincularCampos(PreparedStatement comando, Peca peca) throws SQLException {
+        comando.setString(1, peca.getCodigoBarras());
+        comando.setString(2, peca.getFornecedorMarca());
+        setNullableInt(comando, 3, peca.getQuantidadeEstoque());
+        setNullableDouble(comando, 4, peca.getPrecoCusto());
+        setNullableDouble(comando, 5, peca.getPrecoVenda());
+        comando.setTimestamp(6, peca.getDataCadastro() == null ? null : Timestamp.valueOf(peca.getDataCadastro()));
+        comando.setTimestamp(7, peca.getDataUltimaAtualizacao() == null ? null : Timestamp.valueOf(peca.getDataUltimaAtualizacao()));
+        comando.setString(8, peca.getTamanho());
+        comando.setString(9, peca.getCor());
+        comando.setString(10, peca.getCategoria() == null ? null : peca.getCategoria().name());
+    }
+
+    private void setNullableInt(PreparedStatement comando, int indice, Integer valor) throws SQLException {
+        if (valor == null) comando.setNull(indice, Types.INTEGER); else comando.setInt(indice, valor);
+    }
+
+    private void setNullableDouble(PreparedStatement comando, int indice, Double valor) throws SQLException {
+        if (valor == null) comando.setNull(indice, Types.DOUBLE); else comando.setDouble(indice, valor);
     }
 }

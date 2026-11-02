@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @RestController
@@ -44,7 +45,7 @@ public class OrdemServicoController {
                 OrdemServico ordem = repository.findById(codigo).orElseThrow(() ->
                         new ResponseStatusException(HttpStatus.NOT_FOUND, "Ordem de serviço não encontrada"));
                 ordem.setStatus(dto.getStatus());
-                ordem.setDataUltimaAtualizacao(LocalDateTime.now());
+                ordem.setDataUltimaAtualizacao(LocalDateTime.now().truncatedTo(ChronoUnit.MICROS));
                 return ResponseEntity.ok(OrdemServicoMapper.toDTO(repository.save(ordem)));
             }
         }

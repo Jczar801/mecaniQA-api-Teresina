@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 
 @RestController
 @RequestMapping("/api/pedidos-pecas")
@@ -34,7 +35,7 @@ public class PedidoPecasController {
         synchronized (repository) {
             PedidoPecas pedido = buscar(codigo);
             adicionarItem(pedido, dto);
-            pedido.setDataUltimaAtualizacao(LocalDateTime.now());
+            pedido.setDataUltimaAtualizacao(LocalDateTime.now().truncatedTo(ChronoUnit.MICROS));
             return ResponseEntity.ok(PedidoPecasMapper.toDTO(repository.save(pedido)));
         }
     }
@@ -46,7 +47,7 @@ public class PedidoPecasController {
         synchronized (repository) {
             PedidoPecas pedido = buscar(codigo);
             pedido.setStatus(dto.getStatus());
-            pedido.setDataUltimaAtualizacao(LocalDateTime.now());
+            pedido.setDataUltimaAtualizacao(LocalDateTime.now().truncatedTo(ChronoUnit.MICROS));
             return ResponseEntity.ok(PedidoPecasMapper.toDTO(repository.save(pedido)));
         }
     }

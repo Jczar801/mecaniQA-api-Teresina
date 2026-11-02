@@ -3,6 +3,7 @@ package com.mecaniqa.api.mapper;
 import com.mecaniqa.api.dto.*;
 import com.mecaniqa.api.model.*;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 
 public final class PedidoPecasMapper {
@@ -11,7 +12,7 @@ public final class PedidoPecasMapper {
     public static PedidoPecas toModel(CriarPedidoPecasDTO dto) {
         PedidoPecas pedido = new PedidoPecas();
         pedido.setStatus(StatusPedidoPecas.ORCANDO);
-        pedido.setDataCriacao(LocalDateTime.now());
+        pedido.setDataCriacao(LocalDateTime.now().truncatedTo(ChronoUnit.MICROS));
         pedido.setDataUltimaAtualizacao(pedido.getDataCriacao());
         pedido.setItens(new ArrayList<>());
         return pedido;

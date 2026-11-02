@@ -19,7 +19,7 @@ repositories { mavenCentral() }
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
-    runtimeOnly("com.mysql:mysql-connector-j")
+    implementation("com.mysql:mysql-connector-j:9.1.0")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
 }
 

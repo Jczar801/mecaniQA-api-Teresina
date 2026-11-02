@@ -2,11 +2,13 @@ package com.mecaniqa.api.controller;
 
 import com.mecaniqa.api.model.Servico;
 import com.mecaniqa.api.dto.ServicoDTO;
+import com.mecaniqa.api.exception.RecursoNaoEncontradoException;
 import com.mecaniqa.api.mapper.ServicoMapper;
 import com.mecaniqa.api.repository.ServicoRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @RestController
@@ -18,7 +20,7 @@ public class ServicoController {
     public ResponseEntity<ServicoDTO> criar(@RequestBody ServicoDTO dto) {
         Servico servico = ServicoMapper.toModel(dto);
         servico.setCodigo(null); // garante semântica de criação, ignora qualquer codigo enviado pelo cliente
-        LocalDateTime agora = LocalDateTime.now();
+        LocalDateTime agora = LocalDateTime.now().truncatedTo(ChronoUnit.MICROS);
         servico.setDataCriacao(agora);
         servico.setDataUltimaAtualizacao(agora);
         return ResponseEntity.status(201).body(ServicoMapper.toDTO(repository.save(servico)));
@@ -29,8 +31,12 @@ public class ServicoController {
 
     @GetMapping("/{codigo}")
     public ResponseEntity<ServicoDTO> buscar(@PathVariable Long codigo) {
-        return repository.findById(codigo).map(ServicoMapper::toDTO).map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+        try {
+            Servico servico = repository.findById(codigo).orElseThrow(RecursoNaoEncontradoException::new);
+            return ResponseEntity.ok(ServicoMapper.toDTO(servico));
+        } catch (RecursoNaoEncontradoException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 
     @PutMapping("/{codigo}")
@@ -39,7 +45,7 @@ public class ServicoController {
         return repository.findById(codigo).map(atual -> {
             novo.setCodigo(codigo);
             novo.setDataCriacao(atual.getDataCriacao());
-            novo.setDataUltimaAtualizacao(LocalDateTime.now());
+            novo.setDataUltimaAtualizacao(LocalDateTime.now().truncatedTo(ChronoUnit.MICROS));
             return ResponseEntity.ok(ServicoMapper.toDTO(repository.save(novo)));
         }).orElseGet(() -> ResponseEntity.notFound().build());
     }

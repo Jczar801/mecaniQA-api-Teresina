@@ -1,6 +1,7 @@
 package com.mecaniqa.api.model;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -17,7 +18,7 @@ public class OrdemServico {
     private OrdemServico(Builder builder) {
         descricao = builder.descricao;
         status = StatusOrdemServico.ABERTO;
-        dataCriacao = LocalDateTime.now();
+        dataCriacao = builder.dataCriacao != null ? builder.dataCriacao : LocalDateTime.now().truncatedTo(ChronoUnit.MICROS);
         dataUltimaAtualizacao = dataCriacao;
         servicos = List.copyOf(builder.servicos);
         pedidosPecas = List.copyOf(builder.pedidosPecas);
@@ -37,11 +38,14 @@ public class OrdemServico {
 
     public static class Builder {
         private String descricao;
+        private LocalDateTime dataCriacao;
         private final List<Servico> servicos = new ArrayList<>();
         private final List<PedidoPecas> pedidosPecas = new ArrayList<>();
 
         private Builder() {}
         public Builder descricao(String descricao) { this.descricao = descricao; return this; }
+        /** Usado apenas pelo repositório para reconstruir uma ordem já persistida, preservando a data original. */
+        public Builder dataCriacao(LocalDateTime dataCriacao) { this.dataCriacao = dataCriacao; return this; }
         public Builder adicionarServico(Servico servico) {
             servicos.add(Objects.requireNonNull(servico));
             return this;
